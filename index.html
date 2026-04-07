@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>CEDEAR ARB — Arbitraje MEP/CCL</title>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --bg: #07090f;
+      --surface: #0d1117;
+      --surface2: #111827;
+      --border: #1c2333;
+      --accent: #00e5b0;
+      --accent-glow: rgba(0,229,176,.15);
+      --accent2: #3d9bff;
+      --text: #c9d8f0;
+      --muted: #48607a;
+      --up: #00e5b0;
+      --down: #ff4560;
+      --mono: 'IBM Plex Mono', monospace;
+      --sans: 'IBM Plex Sans', sans-serif;
+    }
+    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* subtle grid bg */
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background-image:
+        linear-gradient(rgba(0,229,176,.02) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,229,176,.02) 1px, transparent 1px);
+      background-size: 44px 44px;
+      pointer-events: none; z-index: 0;
+    }
+
+    /* ── HEADER ───────────────────────────────────── */
+    header {
+      position: sticky; top: 0; z-index: 200;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 28px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(7,9,15,.94);
+      backdrop-filter: blur(14px);
+    }
+    .logo { display: flex; align-items: center; gap: 13px; }
+    .logo-mark {
+      width: 40px; height: 40px; border-radius: 10px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--mono); font-weight: 700; font-size: 13px;
+      color: #000; letter-spacing: -1px; flex-shrink: 0;
+    }
+    .logo-title {
+      font-family: var(--mono); font-weight: 600; font-size: 15px;
+      color: var(--accent); letter-spacing: 2.5px;
+    }
+    .logo-sub { font-size: 10px; color: var(--muted); letter-spacing: 1.5px; margin-top: 2px; }
+    .hdr-right { display: flex; align-items: center; gap: 14px; }
+    #lastUpdate { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+    .btn-refresh {
+      font-family: var(--mono); font-size: 11px; letter-spacing: 1px;
+      padding: 8px 18px; border-radius: 7px; cursor: pointer;
+      background: var(--accent-glow); border: 1px solid var(--accent);
+      color: var(--accent); transition: all .2s;
+    }
+    .btn-refresh:hover { background: rgba(0,229,176,.25); }
+    .btn-refresh:disabled { opacity: .4; cursor: not-allowed; }
+
+    /* ── FX STRIP ─────────────────────────────────── */
+    .fx-strip {
+      position: relative; z-index: 1;
+      display: grid; grid-template-columns: repeat(4, 1fr);
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+    }
+    .fx-card {
+      padding: 18px 24px;
+      border-right: 1px solid var(--border);
+    }
+    .fx-card:last-child { border-right: none; }
+    .fx-label {
+      font-family: var(--mono); font-size: 10px;
+      color: var(--muted); letter-spacing: 1.5px; margin-bottom: 8px;
+    }
+    .fx-value {
+      font-family: var(--mono); font-size: 26px; font-weight: 500;
+      color: var(--accent); line-height: 1;
+    }
+    .fx-value.blue  { color: var(--accent2); }
+    .fx-value.plain { color: var(--text); }
+    .fx-hint { font-size: 10px; color: var(--muted); margin-top: 5px; }
+    .fx-input {
+      background: var(--bg); border: 1px solid var(--border);
+      color: var(--accent); font-family: var(--mono); font-size: 22px;
+      font-weight: 500; padding: 4px 10px; border-radius: 7px;
+      width: 160px; text-align: right; transition: border-color .2s;
+    }
+    .fx-input:focus { outline: none; border-color: var(--accent); }
+    .fx-badge {
+      display: inline-block; margin-top: 7px;
+      font-family: var(--mono); font-size: 9px; letter-spacing: 1px;
+      padding: 2px 8px; border-radius: 4px;
+    }
+    .badge-green { background: rgba(0,229,176,.1); border: 1px solid rgba(0,229,176,.25); color: var(--accent); }
+    .badge-blue  { background: rgba(61,155,255,.1); border: 1px solid rgba(61,155,255,.25); color: var(--accent2); }
+
+    /* ── SUMMARY ──────────────────────────────────── */
+    .summary {
+      position: relative; z-index: 1;
+      display: flex; align-items: center; gap: 22px;
+      padding: 10px 28px;
+      background: var(--surface2);
+      border-bottom: 1px solid var(--border);
+      font-family: var(--mono); font-size: 11px;
+      flex-wrap: wrap;
+    }
+    .sum-live {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--up); display: inline-block;
+      margin-right: 6px;
+      animation: blink 2.2s ease-in-out infinite;
+    }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.2} }
+    .sum-item { color: var(--muted); }
+    .sum-item b { color: var(--text); font-weight: 500; }
+    .sum-item .up   { color: var(--up); }
+    .sum-item .down { color: var(--down); }
+
+    /* ── CONTROLS ─────────────────────────────────── */
+    .controls {
+      position: relative; z-index: 1;
+      display: flex; align-items: center; gap: 10px;
+      padding: 12px 28px; border-bottom: 1px solid var(--border);
+      flex-wrap: wrap;
+    }
+    .search-wrap { position: relative; flex: 1; min-width: 180px; max-width: 280px; }
+    .search-ico {
+      position: absolute; left: 11px; top: 50%; transform: translateY(-50%);
+      color: var(--muted); pointer-events: none; font-size: 14px;
+    }
+    .search-in {
+      width: 100%; background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); font-family: var(--mono); font-size: 12px;
+      padding: 8px 10px 8px 32px; border-radius: 7px; transition: border-color .2s;
+    }
+    .search-in::placeholder { color: var(--muted); }
+    .search-in:focus { outline: none; border-color: var(--accent); }
+    .flt-group { display: flex; gap: 4px; }
+    .flt {
+      font-family: var(--mono); font-size: 10px; letter-spacing: .8px;
+      padding: 7px 13px; border-radius: 6px; cursor: pointer; transition: all .2s;
+      border: 1px solid var(--border); background: var(--surface); color: var(--muted);
+    }
+    .flt.on, .flt:hover {
+      background: var(--accent-glow); border-color: var(--accent); color: var(--accent);
+    }
+    .sort-sel {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); font-family: var(--mono); font-size: 11px;
+      padding: 7px 11px; border-radius: 7px; cursor: pointer;
+    }
+    .sort-sel:focus { outline: none; }
+
+    /* ── TABLE ────────────────────────────────────── */
+    .tbl-wrap {
+      position: relative; z-index: 1;
+      padding: 0 28px 48px; overflow-x: auto;
+    }
+    table { width: 100%; border-collapse: collapse; }
+    thead tr { border-bottom: 2px solid var(--border); }
+    th {
+      font-family: var(--mono); font-size: 9px; font-weight: 500;
+      color: var(--muted); letter-spacing: 1.5px;
+      padding: 14px 10px; text-align: right;
+      cursor: pointer; user-select: none; white-space: nowrap;
+      transition: color .15s;
+    }
+    th:first-child { text-align: left; padding-left: 0; }
+    th:hover { color: var(--accent); }
+    th.asc::after  { content: ' ▲'; color: var(--accent); }
+    th.desc::after { content: ' ▼'; color: var(--accent); }
+
+    tbody tr {
+      border-bottom: 1px solid rgba(28,35,51,.7);
+      transition: background .1s;
+      opacity: 0;
+      animation: rowIn .28s ease forwards;
+    }
+    @keyframes rowIn { to { opacity: 1; transform: none; } from { opacity: 0; transform: translateY(5px); } }
+
+    tbody tr:hover { background: rgba(255,255,255,.016); }
+    td {
+      font-family: var(--mono); font-size: 12.5px;
+      padding: 13px 10px; text-align: right; white-space: nowrap;
+    }
+    td:first-child { text-align: left; padding-left: 0; }
+
+    /* ticker cell */
+    .t-cell { display: flex; align-items: center; gap: 10px; }
+    .t-icon {
+      width: 32px; height: 32px; border-radius: 7px;
+      background: var(--surface2); border: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 9px; font-weight: 700; color: var(--accent2);
+      overflow: hidden; flex-shrink: 0;
+    }
+    .t-icon img { width: 100%; height: 100%; object-fit: contain; padding: 4px; }
+    .t-sym { font-weight: 500; color: var(--text); }
+    .t-name { font-size: 10px; color: var(--muted); margin-top: 1px; max-width: 120px; overflow: hidden; text-overflow: ellipsis; }
+
+    /* column colours */
+    .c-ars     { color: var(--text); }
+    .c-usd     { color: var(--accent2); }
+    .c-ratio   { color: var(--muted); }
+    .c-impl    { color: var(--accent); font-weight: 500; }
+    .c-pos     { color: var(--up); font-weight: 600; }
+    .c-neg     { color: var(--down); font-weight: 600; }
+    .c-zero    { color: var(--muted); }
+
+    /* bar */
+    .bar-wrap  { display: flex; align-items: center; gap: 8px; justify-content: flex-end; }
+    .bar-track { width: 58px; height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; }
+    .bar-fill  { height: 100%; border-radius: 2px; transition: width .6s cubic-bezier(.4,0,.2,1); }
+
+    /* status rows */
+    .msg-row td { text-align: center !important; padding: 52px 0 !important; padding-left: 0 !important; }
+    .spin {
+      display: inline-block; width: 12px; height: 12px;
+      border: 2px solid var(--border); border-top-color: var(--accent);
+      border-radius: 50%; animation: spin .75s linear infinite;
+      margin-right: 9px; vertical-align: middle;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .load-txt { color: var(--muted); font-family: var(--mono); font-size: 12px; letter-spacing: 1px; animation: pulse 1.5s ease-in-out infinite; }
+    .err-txt  { color: var(--down);  font-family: var(--mono); font-size: 12px; }
+    @keyframes pulse { 0%,100%{opacity:.4} 50%{opacity:1} }
+
+    /* toast */
+    #toast {
+      position: fixed; bottom: 22px; right: 22px;
+      background: var(--surface2); border: 1px solid var(--border);
+      color: var(--text); font-family: var(--mono); font-size: 11px;
+      padding: 10px 20px; border-radius: 8px; z-index: 999;
+      opacity: 0; transform: translateY(8px); pointer-events: none;
+      transition: all .3s;
+    }
+    #toast.show { opacity: 1; transform: none; }
+
+    @media (max-width: 900px) {
+      .fx-strip { grid-template-columns: 1fr 1fr; }
+      .fx-card  { border-bottom: 1px solid var(--border); }
+    }
+    @media (max-width: 600px) {
+      header, .controls, .summary, .tbl-wrap { padding-left: 16px; padding-right: 16px; }
+      .fx-strip { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="logo">
+    <div class="logo-mark">C$</div>
+    <div>
+      <div class="logo-title">CEDEAR ARB</div>
+      <div class="logo-sub">ARBITRAJE MEP / CCL · BYMA OPEN DATA</div>
+    </div>
+  </div>
+  <div class="hdr-right">
+    <span id="lastUpdate">—</span>
+    <button class="btn-refresh" id="refreshBtn" onclick="loadAll()">⟳ ACTUALIZAR</button>
+  </div>
+</header>
+
+<!-- FX STRIP -->
+<div class="fx-strip">
+  <div class="fx-card">
+    <div class="fx-label">DÓLAR MEP</div>
+    <div class="fx-value" id="mep-val">—</div>
+    <div class="fx-hint">AL30 · BYMA 48hs</div>
+    <div class="fx-badge badge-green" id="mep-src">AUTO</div>
+  </div>
+  <div class="fx-card">
+    <div class="fx-label">CCL IMPLÍCITO</div>
+    <div class="fx-value blue" id="ccl-val">—</div>
+    <div class="fx-hint">Mediana CEDEARs líquidos</div>
+    <div class="fx-badge badge-blue">CALCULADO</div>
+  </div>
+  <div class="fx-card">
+    <div class="fx-label">DÓLAR OFICIAL</div>
+    <div class="fx-value plain" id="ofic-val">—</div>
+    <div class="fx-hint">BNA minorista</div>
+    <div class="fx-badge badge-blue" id="ofic-src">AUTO</div>
+  </div>
+  <div class="fx-card">
+    <div class="fx-label">DÓLAR PARA ARBITRAJE</div>
+    <div class="fx-hint" style="margin-bottom:8px">Editá para usar tu propio valor</div>
+    <input type="number" class="fx-input" id="dolarCalc" placeholder="—" step="1" oninput="onDolarChange()"/>
+    <div class="fx-badge badge-green">PERSONALIZABLE</div>
+  </div>
+</div>
+
+<!-- SUMMARY -->
+<div class="summary" id="summaryBar">
+  <span class="sum-live"></span>
+  <span class="sum-item">Cargando datos de BYMA…</span>
+</div>
+
+<!-- CONTROLS -->
+<div class="controls">
+  <div class="search-wrap">
+    <span class="search-ico">⌕</span>
+    <input class="search-in" id="searchIn" type="text" placeholder="Buscar ticker o empresa…" oninput="renderTable()"/>
+  </div>
+  <div class="flt-group">
+    <button class="flt on"  data-f="all" onclick="setFlt('all',this)">TODOS</button>
+    <button class="flt"     data-f="pos" onclick="setFlt('pos',this)">OPORTUNIDADES ↑</button>
+    <button class="flt"     data-f="neg" onclick="setFlt('neg',this)">SOBREVALUADOS ↓</button>
+  </div>
+  <select class="sort-sel" id="sortSel" onchange="renderTable()">
+    <option value="arb_desc">Mayor arbitraje</option>
+    <option value="arb_asc">Menor arbitraje</option>
+    <option value="ticker_asc">Ticker A–Z</option>
+    <option value="vol_desc">Mayor volumen</option>
+    <option value="px_ars_desc">Mayor precio ARS</option>
+  </select>
+</div>
+
+<!-- TABLE -->
+<div class="tbl-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th onclick="thSort('ticker')">CEDEAR</th>
+        <th onclick="thSort('px_ars')">PRECIO ARS</th>
+        <th onclick="thSort('var_pct')">VAR %</th>
+        <th onclick="thSort('ratio')">RATIO</th>
+        <th onclick="thSort('px_usd')">PRECIO NYSE</th>
+        <th onclick="thSort('implied')">CCL IMPLÍCITO</th>
+        <th onclick="thSort('arb')">ARBITRAJE</th>
+        <th>SPREAD</th>
+        <th onclick="thSort('vol')">VOLUMEN</th>
+      </tr>
+    </thead>
+    <tbody id="tbody">
+      <tr class="msg-row">
+        <td colspan="9"><span class="spin"></span><span class="load-txt">Conectando con BYMA Open Data…</span></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ─── CONFIG ───────────────────────────────────────────────────────────────────
+// CORS proxy: routes the request through a public server that adds CORS headers
+const PROXY   = 'https://corsproxy.io/?';
+const BYMA    = 'https://open.bymadata.com.ar/vanoms-be-core/rest/api/bymadata/free';
+
+// Ratio CEDEAR→1 acción NYSE (cuántos CEDEARs equivalen a 1 acción en EE.UU.)
+const RATIOS = {
+  AAPL:10, MSFT:10, GOOGL:10, AMZN:10, TSLA:10, META:5, NVDA:10,
+  NFLX:5,  ORCL:5,  IBM:2,   AMD:10,  INTC:5,  QCOM:5, CSCO:5,
+  JPM:5,   BAC:10,  GS:2,    MS:5,    C:10,    WFC:5,
+  KO:5,    PEP:5,   MCD:5,   SBUX:5,  NKE:5,   DIS:5,
+  XOM:5,   CVX:5,   COP:5,
+  JNJ:2,   PFE:5,   MRK:5,   ABBV:5,
+  WMT:5,   HD:5,    AMGN:5,
+  MELI:2,  GOLD:10, AEM:5,   BRK:2,
+  SPY:10,  QQQ:10,  GLD:50,  SLV:50,  EWZ:10,
+  BABA:5,  TSM:5,
+  // Argentinas
+  GGAL:10, YPF:1,   PAM:10,  BMA:5,   LOMA:10, TGS:5,
+  TECO2:10,TXAR:10, ALUA:10, CRES:5,  HARG:5,  IRSA:10,
+  CEPU:10, SUPV:5,  PAMP:5,  EDN:5,   COME:25, BBAR:10,
+  BYMA:10, MIRG:5,  MOLI:5,  VALO:10, TRAN:5,
+};
+
+// ─── STATE ────────────────────────────────────────────────────────────────────
+let rows       = [];
+let dolarRef   = 0;
+let mepAuto    = 0;
+let cclAuto    = 0;
+let activeF    = 'all';
+let sortCol    = 'arb';
+let sortDir    = 'desc';
+
+// ─── FETCH helpers ────────────────────────────────────────────────────────────
+async function bymaPost(path, body) {
+  const url = PROXY + encodeURIComponent(`${BYMA}/${path}`);
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ...body, 'Content-Type': 'application/json' })
+  });
+  if (!res.ok) throw new Error(`BYMA ${res.status}`);
+  const j = await res.json();
+  return Array.isArray(j) ? j : (j.data || []);
+}
+
+async function getDolares() {
+  // dolarapi.com — datos del MEP y oficial publicados por el propio BCRA
+  try {
+    const [mepR, ofR] = await Promise.all([
+      fetch('https://dolarapi.com/v1/dolares/bolsa'),
+      fetch('https://dolarapi.com/v1/dolares/oficial')
+    ]);
+    const mepJ = mepR.ok ? await mepR.json() : {};
+    const ofJ  = ofR.ok  ? await ofR.json()  : {};
+    return {
+      mep:     parseFloat(mepJ.venta || 0),
+      oficial: parseFloat(ofJ.venta  || 0)
+    };
+  } catch { return { mep: 0, oficial: 0 }; }
+}
+
+// ─── PROCESS ──────────────────────────────────────────────────────────────────
+function getRatio(ticker, apiRatio) {
+  if (apiRatio > 0) return apiRatio;
+  const base = ticker.replace(/D$/, '').replace(/\s/g, '');
+  return RATIOS[base] || RATIOS[ticker] || 1;
+}
+
+function processCedears(raw) {
+  return raw
+    .map(item => {
+      const ticker  = (item.symbolWithSuffix || item.symbol || '').trim();
+      const name    = item.shortName || item.description || ticker;
+      const px_ars  = parseFloat(item.last || item.trade || 0);
+      const px_usd  = parseFloat(item.underlyingPrice || item.underlying_price || 0);
+      const ratio   = getRatio(ticker, parseFloat(item.ratio || item.conversionRatio || 0));
+      const var_pct = parseFloat(item.changePercent || item.pctChange || 0);
+      const vol     = parseFloat(item.totalAmountTraded || item.volume || 0);
+      // CCL implícito = precio_ars / ratio / precio_usd_nyse
+      const implied = (px_usd > 0 && ratio > 0 && px_ars > 0) ? (px_ars / ratio) / px_usd : 0;
+      return { ticker, name, px_ars, px_usd, ratio, var_pct, vol, implied, arb: null };
+    })
+    .filter(r => r.ticker && r.px_ars > 0);
+}
+
+function medianCCL(processed) {
+  const vals = processed
+    .filter(r => r.implied > 0 && r.px_ars > 200 && r.vol > 5000)
+    .map(r => r.implied)
+    .sort((a, b) => a - b);
+  if (!vals.length) return 0;
+  const m = Math.floor(vals.length / 2);
+  return vals.length % 2 ? vals[m] : (vals[m-1] + vals[m]) / 2;
+}
+
+function calcArb(processed, dolar) {
+  return processed.map(r => ({
+    ...r,
+    arb: (r.implied > 0 && dolar > 0) ? ((r.implied - dolar) / dolar) * 100 : null
+  }));
+}
+
+// ─── MAIN LOAD ────────────────────────────────────────────────────────────────
+async function loadAll() {
+  const btn = document.getElementById('refreshBtn');
+  btn.disabled = true; btn.textContent = '⟳ CARGANDO…';
+  setLoading();
+
+  try {
+    const PAYLOAD = { excludeZeroPxAndQty: false, T2: true, T1: false, T0: false };
+    const [cedearRaw, dolarData] = await Promise.all([
+      bymaPost('cedears', PAYLOAD),
+      getDolares()
+    ]);
+
+    if (!cedearRaw.length) throw new Error('Sin datos — el mercado puede estar cerrado.');
+
+    mepAuto = dolarData.mep;
+    const processed = processCedears(cedearRaw);
+    cclAuto = medianCCL(processed);
+
+    // Auto-llenar el input con MEP si el usuario no puso nada
+    const inp = document.getElementById('dolarCalc');
+    if (!inp.value || parseFloat(inp.value) <= 0) {
+      inp.value = mepAuto > 0 ? Math.round(mepAuto) : (cclAuto > 0 ? Math.round(cclAuto) : '');
+    }
+    dolarRef = parseFloat(inp.value) || cclAuto || mepAuto;
+
+    rows = calcArb(processed, dolarRef);
+
+    updateFx(dolarData.oficial);
+    updateSummary();
+    renderTable();
+
+    const ts = new Date().toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+    document.getElementById('lastUpdate').textContent = `Act. ${ts}`;
+    toast('✓ Datos actualizados — ' + rows.length + ' CEDEARs');
+
+  } catch (e) {
+    setError(e.message);
+    toast('✗ ' + e.message, true);
+  }
+
+  btn.disabled = false; btn.textContent = '⟳ ACTUALIZAR';
+}
+
+function onDolarChange() {
+  dolarRef = parseFloat(document.getElementById('dolarCalc').value) || 0;
+  rows = calcArb(rows, dolarRef);
+  updateSummary();
+  renderTable();
+}
+
+// ─── FX STRIP ─────────────────────────────────────────────────────────────────
+function updateFx(oficial) {
+  const set = (id, v) => document.getElementById(id).textContent = v > 0 ? '$' + fmt(v, 0) : '—';
+  set('mep-val',  mepAuto);
+  set('ccl-val',  cclAuto);
+  set('ofic-val', oficial);
+  document.getElementById('mep-src').textContent  = mepAuto > 0 ? 'DOLARAPI' : 'N/D';
+  document.getElementById('ofic-src').textContent = oficial  > 0 ? 'BNA'      : 'N/D';
+}
+
+// ─── SUMMARY ──────────────────────────────────────────────────────────────────
+function updateSummary() {
+  const withArb = rows.filter(r => r.arb !== null);
+  const pos     = withArb.filter(r => r.arb > 1).length;
+  const neg     = withArb.filter(r => r.arb < -1).length;
+  const best    = [...withArb].sort((a,b) => b.arb - a.arb)[0];
+  const worst   = [...withArb].sort((a,b) => a.arb - b.arb)[0];
+
+  document.getElementById('summaryBar').innerHTML = `
+    <span class="sum-live"></span>
+    <span class="sum-item">CEDEARs: <b>${rows.length}</b></span>
+    <span class="sum-item">Oportunidades: <b class="up">+${pos}</b></span>
+    <span class="sum-item">Sobrevaluados: <b class="down">${neg}</b></span>
+    ${best  ? `<span class="sum-item">Mayor spread: <b class="up">${best.ticker} ${fmtPct(best.arb)}</b></span>` : ''}
+    ${worst ? `<span class="sum-item">Menor spread: <b class="down">${worst.ticker} ${fmtPct(worst.arb)}</b></span>` : ''}
+    ${dolarRef > 0 ? `<span class="sum-item">Dólar ref: <b>$${fmt(dolarRef,0)}</b></span>` : ''}
+  `;
+}
+
+// ─── FILTER + SORT ────────────────────────────────────────────────────────────
+function setFlt(f, el) {
+  activeF = f;
+  document.querySelectorAll('.flt').forEach(b => b.classList.remove('on'));
+  el.classList.add('on');
+  renderTable();
+}
+
+function thSort(col) {
+  sortDir = (sortCol === col && sortDir === 'desc') ? 'asc' : 'desc';
+  sortCol = col;
+  // sync dropdown visually
+  document.getElementById('sortSel').value =
+    col === 'vol' ? 'vol_desc' : col === 'ticker' ? 'ticker_asc' :
+    col === 'px_ars' ? 'px_ars_desc' : sortDir === 'asc' ? 'arb_asc' : 'arb_desc';
+  renderTable();
+}
+
+// ─── RENDER ───────────────────────────────────────────────────────────────────
+function renderTable() {
+  // sync sort from dropdown
+  const sv = document.getElementById('sortSel').value;
+  if (sv === 'arb_desc')    { sortCol = 'arb';    sortDir = 'desc'; }
+  if (sv === 'arb_asc')     { sortCol = 'arb';    sortDir = 'asc';  }
+  if (sv === 'ticker_asc')  { sortCol = 'ticker'; sortDir = 'asc';  }
+  if (sv === 'vol_desc')    { sortCol = 'vol';    sortDir = 'desc'; }
+  if (sv === 'px_ars_desc') { sortCol = 'px_ars'; sortDir = 'desc'; }
+
+  // update th classes
+  document.querySelectorAll('thead th').forEach(th => {
+    th.classList.remove('asc','desc');
+    const col = th.getAttribute('onclick')?.match(/'(\w+)'/)?.[1];
+    if (col === sortCol) th.classList.add(sortDir);
+  });
+
+  const q = document.getElementById('searchIn').value.toLowerCase();
+
+  let data = rows.filter(r => {
+    const mQ = !q || r.ticker.toLowerCase().includes(q) || r.name.toLowerCase().includes(q);
+    const mF = activeF === 'all'
+      || (activeF === 'pos' && r.arb != null && r.arb >  1)
+      || (activeF === 'neg' && r.arb != null && r.arb < -1);
+    return mQ && mF;
+  });
+
+  data.sort((a, b) => {
+    let av = a[sortCol], bv = b[sortCol];
+    if (av == null) av = sortDir === 'asc' ?  Infinity : -Infinity;
+    if (bv == null) bv = sortDir === 'asc' ?  Infinity : -Infinity;
+    if (typeof av === 'string') return sortDir === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av);
+    return sortDir === 'asc' ? av - bv : bv - av;
+  });
+
+  const maxA = Math.max(...data.map(r => Math.abs(r.arb || 0)), 1);
+  const tbody = document.getElementById('tbody');
+
+  if (!data.length) {
+    tbody.innerHTML = `<tr class="msg-row"><td colspan="9"><span style="color:var(--muted);font-family:var(--mono);font-size:12px">Sin resultados</span></td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = data.map((r, i) => {
+    const arbCls = r.arb == null ? 'c-zero' : r.arb > 1 ? 'c-pos' : r.arb < -1 ? 'c-neg' : 'c-zero';
+    const arbTxt = r.arb == null ? '—' : (r.arb > 0 ? '+' : '') + r.arb.toFixed(2) + '%';
+    const varCls = r.var_pct > 0 ? 'c-pos' : r.var_pct < 0 ? 'c-neg' : 'c-zero';
+    const barW   = r.arb != null ? Math.min(Math.abs(r.arb) / maxA * 100, 100) : 0;
+    const barClr = r.arb == null ? '#1c2333' : r.arb > 0 ? 'var(--up)' : 'var(--down)';
+    const base   = r.ticker.replace(/D$/, '').replace(/\s/g, '');
+    const initials = base.slice(0, 2);
+
+    return `<tr style="animation-delay:${i * 16}ms">
+      <td>
+        <div class="t-cell">
+          <div class="t-icon" data-init="${initials}">
+            <img src="https://assets.parqet.com/logos/symbol/${base}?format=png"
+                 alt="${base}"
+                 onerror="this.style.display='none';this.parentNode.textContent=this.parentNode.dataset.init"/>
+          </div>
+          <div>
+            <div class="t-sym">${r.ticker}</div>
+            <div class="t-name" title="${r.name}">${r.name}</div>
+          </div>
+        </div>
+      </td>
+      <td class="c-ars">${r.px_ars > 0 ? '$' + fmt(r.px_ars, 2) : '—'}</td>
+      <td class="${varCls}">${r.var_pct !== 0 ? (r.var_pct > 0 ? '+' : '') + r.var_pct.toFixed(2) + '%' : '—'}</td>
+      <td class="c-ratio">${r.ratio}:1</td>
+      <td class="c-usd">${r.px_usd > 0 ? 'U$S ' + fmt(r.px_usd, 2) : '—'}</td>
+      <td class="c-impl">${r.implied > 0 ? '$' + fmt(r.implied, 0) : '—'}</td>
+      <td class="${arbCls}">${arbTxt}</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar-track">
+            <div class="bar-fill" style="width:${barW.toFixed(1)}%;background:${barClr}"></div>
+          </div>
+        </div>
+      </td>
+      <td style="color:var(--muted)">${r.vol > 0 ? fmtVol(r.vol) : '—'}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ─── STATUS ROWS ──────────────────────────────────────────────────────────────
+function setLoading() {
+  document.getElementById('tbody').innerHTML =
+    `<tr class="msg-row"><td colspan="9"><span class="spin"></span><span class="load-txt">Cargando CEDEARs desde BYMA…</span></td></tr>`;
+}
+function setError(msg) {
+  document.getElementById('tbody').innerHTML =
+    `<tr class="msg-row"><td colspan="9"><span class="err-txt">⚠ ${msg}</span></td></tr>`;
+  document.getElementById('summaryBar').innerHTML =
+    `<span class="sum-item" style="color:var(--down)">Error al cargar. El mercado puede estar cerrado o intente en unos minutos.</span>`;
+}
+
+// ─── TOAST ────────────────────────────────────────────────────────────────────
+let _toastT;
+function toast(msg, err = false) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.style.borderColor = err ? 'var(--down)' : 'var(--border)';
+  el.classList.add('show');
+  clearTimeout(_toastT);
+  _toastT = setTimeout(() => el.classList.remove('show'), 3200);
+}
+
+// ─── FORMAT ───────────────────────────────────────────────────────────────────
+function fmt(n, dec = 2) {
+  return Number(n).toLocaleString('es-AR', { minimumFractionDigits: dec, maximumFractionDigits: dec });
+}
+function fmtPct(n) {
+  return n == null ? '—' : (n > 0 ? '+' : '') + n.toFixed(2) + '%';
+}
+function fmtVol(n) {
+  if (n >= 1e9) return (n/1e9).toFixed(1) + 'B';
+  if (n >= 1e6) return (n/1e6).toFixed(1) + 'M';
+  if (n >= 1e3) return (n/1e3).toFixed(0) + 'K';
+  return n.toFixed(0);
+}
+
+// ─── INIT ────────────────────────────────────────────────────────────────────
+loadAll();
+// Auto-refresh cada 3 min en horario de mercado (11-17 hs Argentina)
+setInterval(() => {
+  const h = new Date().getHours();
+  if (h >= 11 && h < 18) loadAll();
+}, 3 * 60 * 1000);
+</script>
+</body>
+</html>
