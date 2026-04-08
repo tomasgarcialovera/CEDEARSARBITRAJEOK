@@ -364,63 +364,22 @@
 
 <script>
 // ─── CONFIG ───────────────────────────────────────────────────────────────────
-const BYMA = 'https://open.bymadata.com.ar/vanoms-be-core/rest/api/bymadata/free';
-
-// Lista de proxies CORS públicos — prueba uno por uno hasta que funcione
-const PROXIES = [
-  url => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
-  url => `https://corsproxy.io/?${encodeURIComponent(url)}`,
-  url => `https://proxy.cors.sh/${url}`,
-];
-
-// Ratio CEDEAR→1 acción NYSE (cuántos CEDEARs equivalen a 1 acción en EE.UU.)
-const RATIOS = {
-  AAPL:10, MSFT:10, GOOGL:10, AMZN:10, TSLA:10, META:5, NVDA:10,
-  NFLX:5,  ORCL:5,  IBM:2,   AMD:10,  INTC:5,  QCOM:5, CSCO:5,
-  JPM:5,   BAC:10,  GS:2,    MS:5,    C:10,    WFC:5,
-  KO:5,    PEP:5,   MCD:5,   SBUX:5,  NKE:5,   DIS:5,
-  XOM:5,   CVX:5,   COP:5,
-  JNJ:2,   PFE:5,   MRK:5,   ABBV:5,
-  WMT:5,   HD:5,    AMGN:5,
-  MELI:2,  GOLD:10, AEM:5,   BRK:2,
-  SPY:10,  QQQ:10,  GLD:50,  SLV:50,  EWZ:10,
-  BABA:5,  TSM:5,
-  // Argentinas
-  GGAL:10, YPF:1,   PAM:10,  BMA:5,   LOMA:10, TGS:5,
-  TECO2:10,TXAR:10, ALUA:10, CRES:5,  HARG:5,  IRSA:10,
-  CEPU:10, SUPV:5,  PAMP:5,  EDN:5,   COME:25, BBAR:10,
-  BYMA:10, MIRG:5,  MOLI:5,  VALO:10, TRAN:5,
-};
-
-// ─── STATE ────────────────────────────────────────────────────────────────────
-let rows       = [];
-let dolarRef   = 0;
-let mepAuto    = 0;
-let cclAuto    = 0;
-let activeF    = 'all';
-let sortCol    = 'arb';
-let sortDir    = 'desc';
+// Tu propio proxy Cloudflare Worker — sin límites, siempre disponible
+const WORKER_URL = 'https://byma-proxy.tomasgarcialovera.workers.dev';
 
 // ─── FETCH helpers ────────────────────────────────────────────────────────────
 async function bymaPost(path, body) {
-  const targetUrl = `${BYMA}/${path}`;
-  const payload = JSON.stringify({ ...body, 'Content-Type': 'application/json' });
-  let lastErr;
-  for (const makeProxyUrl of PROXIES) {
-    try {
-      const res = await fetch(makeProxyUrl(targetUrl), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-requested-with': 'XMLHttpRequest' },
-        body: payload,
-        signal: AbortSignal.timeout(12000)
-      });
-      if (!res.ok) { lastErr = new Error(`BYMA ${res.status}`); continue; }
-      const j = await res.json();
-      return Array.isArray(j) ? j : (j.data || j.content || []);
-    } catch(e) { lastErr = e; }
-  }
-  throw lastErr || new Error('No se pudo conectar con BYMA');
+  const res = await fetch(WORKER_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ...body, 'Content-Type': 'application/json' }),
+    signal: AbortSignal.timeout(15000)
+  });
+  if (!res.ok) throw new Error('BYMA ' + res.status);
+  const j = await res.json();
+  return Array.isArray(j) ? j : (j.data || j.content || []);
 }
+
 
 async function getDolares() {
   // dolarapi.com — datos del MEP y oficial publicados por el propio BCRA
