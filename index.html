@@ -399,6 +399,15 @@ async function bymaPost(path, body) {
 }
 
 
+// ─── STATE ────────────────────────────────────────────────────────────────────
+let rows     = [];
+let dolarRef = 0;
+let mepAuto  = 0;
+let cclAuto  = 0;
+let activeF  = 'all';
+let sortCol  = 'arb';
+let sortDir  = 'desc';
+
 async function getDolares() {
   // dolarapi.com — datos del MEP y oficial publicados por el propio BCRA
   try {
