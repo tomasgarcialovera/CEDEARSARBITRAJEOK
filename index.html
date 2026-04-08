@@ -387,7 +387,7 @@ const RATIOS = {
 
 // ─── FETCH helpers ────────────────────────────────────────────────────────────
 async function bymaPost(path, body) {
-  const res = await fetch(WORKER_URL, {
+  const res = await fetch(WORKER_URL + '/cedears', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ ...body, 'Content-Type': 'application/json' }),
@@ -396,6 +396,31 @@ async function bymaPost(path, body) {
   if (!res.ok) throw new Error('BYMA ' + res.status);
   const j = await res.json();
   return Array.isArray(j) ? j : (j.data || j.content || []);
+}
+
+// Fetch NYSE prices in batches via Yahoo Finance through our Worker
+async function fetchNYSEPrices(tickers) {
+  // Get unique base tickers (remove D suffix for local tickers)
+  const bases = [...new Set(tickers.map(t => t.replace(/D$/, '').replace(/\s/g, '')))];
+  const prices = {};
+  
+  // Batch in groups of 50
+  const batchSize = 50;
+  for (let i = 0; i < bases.length; i += batchSize) {
+    const batch = bases.slice(i, i + batchSize);
+    try {
+      const res = await fetch(WORKER_URL + '/yahoo?symbols=' + batch.join(','), {
+        signal: AbortSignal.timeout(15000)
+      });
+      if (!res.ok) continue;
+      const j = await res.json();
+      const quotes = j?.quoteResponse?.result || [];
+      quotes.forEach(q => {
+        if (q.regularMarketPrice) prices[q.symbol] = q.regularMarketPrice;
+      });
+    } catch(e) { /* continue with next batch */ }
+  }
+  return prices;
 }
 
 
@@ -481,7 +506,17 @@ async function loadAll() {
     if (!cedearRaw.length) throw new Error('Sin datos — el mercado puede estar cerrado.');
 
     mepAuto = dolarData.mep;
-    const processed = processCedears(cedearRaw);
+    let processed = processCedears(cedearRaw);
+
+    // Fetch NYSE prices and enrich processed data
+    const tickers = processed.map(r => r.ticker);
+    const nysePrices = await fetchNYSEPrices(tickers);
+    processed = processed.map(r => {
+      const base = r.ticker.replace(/D$/, '').replace(/\s/g, '');
+      const px_usd = nysePrices[base] || nysePrices[r.ticker] || r.px_usd;
+      const implied = (px_usd > 0 && r.ratio > 0 && r.px_ars > 0) ? (r.px_ars / r.ratio) / px_usd : 0;
+      return { ...r, px_usd, implied };
+    });
     cclAuto = medianCCL(processed);
 
     // Auto-llenar el input con MEP si el usuario no puso nada
